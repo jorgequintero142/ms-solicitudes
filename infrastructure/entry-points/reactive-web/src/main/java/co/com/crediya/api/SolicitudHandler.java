@@ -27,7 +27,12 @@ public class SolicitudHandler {
                     required = true,
                     content = @Content(
                             schema = @Schema(
-                                    implementation = Solicitud.class
+                                   example = "{\n" +
+                                           "  \"monto\": 100000,\n" +
+                                           "  \"plazo\": 6,\n" +
+                                           "  \"documentoIdentidad\": \"444444\",\n" +
+                                           "  \"idTipoPrestamo\": 2\n" +
+                                           "}"
                             )
                     )
             ),
@@ -36,14 +41,31 @@ public class SolicitudHandler {
                             responseCode = "200",
                             description = "Solicitud creada",
                             content = @Content(
-                                    schema = @io.swagger.v3.oas.annotations.media.Schema(
-                                            implementation = Solicitud.class
+                                    schema = @Schema(
+                                           example = "{\n" +
+                                                   "  \"idSolicitud\": 32,\n" +
+                                                   "  \"monto\": 100000,\n" +
+                                                   "  \"plazo\": 6,\n" +
+                                                   "  \"email\": \"pedroperez@email.com\",\n" +
+                                                   "  \"documentoIdentidad\": \"444444\",\n" +
+                                                   "  \"idEstado\": 1,\n" +
+                                                   "  \"idTipoPrestamo\": 2\n" +
+                                                   "}"
                                     )
                             )
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Validación fallida"
+                            description = "Validación fallida",
+                            content = @Content(
+                            schema = @Schema(
+                                    example = "{\n" +
+                                            "  \"error\": \"Validación fallida\",\n" +
+                                            "  \"message\": \"No existe tipo de prestamo\",\n" +
+                                            "  \"status\": 400\n" +
+                                            "}"
+                            )
+                            )
                     )
             }
     )

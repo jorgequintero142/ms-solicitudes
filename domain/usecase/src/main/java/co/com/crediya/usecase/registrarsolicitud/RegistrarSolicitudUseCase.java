@@ -5,6 +5,7 @@ import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
 import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.solicitud.gateways.TipoPrestamoRepository;
+import co.com.crediya.usecase.errors.ErroresEnum;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
@@ -32,17 +33,17 @@ public class RegistrarSolicitudUseCase {
 
     private Mono<Void> validarDatosBasicos(Solicitud solicitud) {
         if ( solicitud.getPlazo() < PLAZO_MINIMO) {
-            return Mono.error(new ParametroNoValidoException("Valor del monto no es correcto"));
+            return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_PLAZO.getMensaje()));
         }
         if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(MONTO_MINIMO) <= 0) {
-            return Mono.error(new ParametroNoValidoException("Valor del monto no es correcto"));
+            return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_VALOR_MONTO.getMensaje()));
         }
         return Mono.empty();
     }
 
     private Mono<Void> validarTipoPrestamo(Solicitud solicitud) {
         return tipoPrestamoRepository.buscarPorId(solicitud.getIdTipoPrestamo())
-                .switchIfEmpty(Mono.error(new ParametroNoValidoException("No existe tipo de prestamo")))
+                .switchIfEmpty(Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_TIPO_PRESTAMO.getMensaje())))
                 .then();
     }
 
@@ -50,13 +51,13 @@ public class RegistrarSolicitudUseCase {
         return clienteWebClientes.buscarCliente(solicitud.getDocumentoIdentidad())
                 .flatMap(cliente -> {
                     if (cliente == null) {
-                        return Mono.error(new ParametroNoValidoException("No se encontró información del cliente"));
+                        return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_CONSULTA_CLIENTE.getMensaje()));
                     }
                     solicitud.setEmail(cliente.getEmail());
                     return Mono.just(solicitud);
                 })
                 .onErrorResume(e -> {
-                    return Mono.error(new ParametroNoValidoException("No se encontró información del cliente"));
+                    return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_CONSULTA_CLIENTE.getMensaje()));
                 });
     }
 
