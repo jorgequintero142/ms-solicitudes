@@ -1,24 +1,20 @@
 package co.com.crediya.model.solicitud.request;
 
-import lombok.*;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.Builder;
 
 @Getter
 @Setter
-@NoArgsConstructor // ✅ Necesario para Jackson
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class UsuarioResponse {
-    private Integer idUsuario;
-    private String nombre;
-    private String apellido;
-    private String email;
-    private String documentoIdentidad;
-    private LocalDate fechaNacimiento;
-    private String direccion;
-    private String telefono;
-    private BigDecimal salarioBase;
+    private Integer estado;
+    private String mensaje;
+    private DatosUsuario data;
 
 }

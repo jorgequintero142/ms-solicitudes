@@ -1,7 +1,9 @@
 package co.com.crediya.model.solicitud.exceptions;
 
-public class NoEncontradoException extends RuntimeException {
-    public NoEncontradoException(String mensaje) {
-        super(mensaje);
+public class NoEncontradoException extends SolicitudException {
+    static final String MENSAJE = "No encontrado";
+
+    public NoEncontradoException(String error) {
+        super(error, NoEncontradoException.MENSAJE, SolicitudException.ESTADO_NO_ENCONTRADO);
     }
 }

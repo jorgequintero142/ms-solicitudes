@@ -1,6 +1,8 @@
 package co.com.crediya.api;
 
+import co.com.crediya.api.dto.RespuestaApi;
 import co.com.crediya.model.solicitud.Solicitud;
+import co.com.crediya.model.solicitud.SolicitudCreada;
 import co.com.crediya.usecase.registrarsolicitud.RegistrarSolicitudUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,7 +19,9 @@ import reactor.core.publisher.Mono;
 @Component
 @RequiredArgsConstructor
 public class SolicitudHandler {
-    private  final RegistrarSolicitudUseCase registrarSolicitudUseCase;
+    private final RegistrarSolicitudUseCase registrarSolicitudUseCase;
+    private static final String SOLICITUD_CREADA = "Solicitud creada";
+    private static final int CODIGO_ESTADO_OK = 200;
 
     @Operation(
             summary = "Crear un nueva solicitud",
@@ -27,12 +31,14 @@ public class SolicitudHandler {
                     required = true,
                     content = @Content(
                             schema = @Schema(
-                                   example = "{\n" +
-                                           "  \"monto\": 100000,\n" +
-                                           "  \"plazo\": 6,\n" +
-                                           "  \"documentoIdentidad\": \"444444\",\n" +
-                                           "  \"idTipoPrestamo\": 2\n" +
-                                           "}"
+                                    example = """ 
+                                            {
+                                              "monto": 100000,
+                                              "plazo": 6,
+                                              "documentoIdentidad": "444444",
+                                              "idTipoPrestamo": 2
+                                            }
+                                            """
                             )
                     )
             ),
@@ -42,15 +48,17 @@ public class SolicitudHandler {
                             description = "Solicitud creada",
                             content = @Content(
                                     schema = @Schema(
-                                           example = "{\n" +
-                                                   "  \"idSolicitud\": 32,\n" +
-                                                   "  \"monto\": 100000,\n" +
-                                                   "  \"plazo\": 6,\n" +
-                                                   "  \"email\": \"pedroperez@email.com\",\n" +
-                                                   "  \"documentoIdentidad\": \"444444\",\n" +
-                                                   "  \"idEstado\": 1,\n" +
-                                                   "  \"idTipoPrestamo\": 2\n" +
-                                                   "}"
+                                            example = """
+                                                    {
+                                                      "idSolicitud": 32,
+                                                      "monto": 100000,
+                                                      "plazo": 6,
+                                                      "email": "pedroperez@email.com",
+                                                      "documentoIdentidad": "444444",
+                                                      "idEstado": 1,
+                                                      "idTipoPrestamo": 2
+                                                    }
+                                                    """
                                     )
                             )
                     ),
@@ -58,13 +66,15 @@ public class SolicitudHandler {
                             responseCode = "400",
                             description = "Validación fallida",
                             content = @Content(
-                            schema = @Schema(
-                                    example = "{\n" +
-                                            "  \"error\": \"Validación fallida\",\n" +
-                                            "  \"message\": \"No existe tipo de prestamo\",\n" +
-                                            "  \"status\": 400\n" +
-                                            "}"
-                            )
+                                    schema = @Schema(
+                                            example = """
+                                                    {
+                                                      "error": "Validación fallida",
+                                                      "message": "No existe tipo de prestamo",
+                                                      "status": 400
+                                                    }
+                                                    """
+                                    )
                             )
                     )
             }
@@ -72,8 +82,10 @@ public class SolicitudHandler {
     public Mono<ServerResponse> registrar(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(Solicitud.class)
                 .flatMap(registrarSolicitudUseCase::registrar)
-                .flatMap(solicitudGuardada -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(solicitudGuardada));
+                .flatMap(solicitudGuardada -> {
+                            RespuestaApi<SolicitudCreada> respuesta = new RespuestaApi<>(SolicitudHandler.CODIGO_ESTADO_OK, SolicitudHandler.SOLICITUD_CREADA, solicitudGuardada);
+                            return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(respuesta);
+                        }
+                );
     }
 }

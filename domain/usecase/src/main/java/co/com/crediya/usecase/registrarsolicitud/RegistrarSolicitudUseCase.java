@@ -1,28 +1,49 @@
 package co.com.crediya.usecase.registrarsolicitud;
 
+import co.com.crediya.model.solicitud.Estado;
 import co.com.crediya.model.solicitud.Solicitud;
+import co.com.crediya.model.solicitud.SolicitudCreada;
+import co.com.crediya.model.solicitud.TipoPrestamo;
 import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
 import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
+import co.com.crediya.model.solicitud.gateways.EstadoRepository;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.solicitud.gateways.TipoPrestamoRepository;
-import co.com.crediya.usecase.errors.ErroresEnum;
+import co.com.crediya.usecase.Constantes;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
-import java.math.BigDecimal;
 
 @RequiredArgsConstructor
 public class RegistrarSolicitudUseCase {
 
-    private final int PLAZO_MINIMO = 6;
-    private final BigDecimal MONTO_MINIMO = new BigDecimal("0");
-    private final int ESTADO_PENDIENTE = 1;
-    private final SolicitudRepository usuarioRepositorio;
-    private final TipoPrestamoRepository tipoPrestamoRepository;
-    private final ClienteWebClientes clienteWebClientes;
-   // private static final Logger logger = LoggerFactory.getLogger(RegistrarSolicitudUseCase.class);
-    public Mono<Solicitud> registrar(Solicitud solicitud) {
 
-        return validarSolicitud(solicitud).map(s-> {s.setIdEstado(ESTADO_PENDIENTE); return s;}).flatMap(usuarioRepositorio::registrar);
+    private final SolicitudRepository solicitudRepository;
+    private final TipoPrestamoRepository tipoPrestamoRepository;
+    private final EstadoRepository estadoRepository;
+    private final ClienteWebClientes clienteWebClientes;
+
+
+    public Mono<SolicitudCreada> registrar(Solicitud solicitud) {
+
+        return validarSolicitud(solicitud)
+                .flatMap(solicitudRepository::registrar)
+                .flatMap(solicitudCreada ->
+                        buscarTipoPrestamo(solicitud)
+                                .map(tipoPrestamo -> {
+                                    solicitudCreada.setTipoPrestamo(tipoPrestamo.getNombre());
+                                    return solicitudCreada;
+                                })
+                ).flatMap(solicitudCreada ->
+                        buscarEstado(solicitudCreada.getIdEstado())
+                                .map(estado -> {
+                                    solicitudCreada.setEstado(estado.getNombre());
+                                    return solicitudCreada;
+                                })
+                );
+    }
+
+    private Mono<Estado> buscarEstado(int idEstado) {
+        return estadoRepository.buscarPorId(idEstado);
     }
 
     private Mono<Solicitud> validarSolicitud(Solicitud solicitud) {
@@ -32,34 +53,31 @@ public class RegistrarSolicitudUseCase {
     }
 
     private Mono<Void> validarDatosBasicos(Solicitud solicitud) {
-        if ( solicitud.getPlazo() < PLAZO_MINIMO) {
-            return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_PLAZO.getMensaje()));
+        if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO) {
+            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
         }
-        if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(MONTO_MINIMO) <= 0) {
-            return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_VALOR_MONTO.getMensaje()));
+        if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0) {
+            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
         }
         return Mono.empty();
     }
 
-    private Mono<Void> validarTipoPrestamo(Solicitud solicitud) {
-        return tipoPrestamoRepository.buscarPorId(solicitud.getIdTipoPrestamo())
-                .switchIfEmpty(Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_TIPO_PRESTAMO.getMensaje())))
-                .then();
+    private Mono<TipoPrestamo> buscarTipoPrestamo(Solicitud solicitud) {
+        return tipoPrestamoRepository.buscarPorId(solicitud.getIdTipoPrestamo());
+    }
+
+
+    private Mono<TipoPrestamo> validarTipoPrestamo(Solicitud solicitud) {
+        return buscarTipoPrestamo(solicitud).switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ERROR_TIPO_PRESTAMO)));
     }
 
     private Mono<Solicitud> validarCliente(Solicitud solicitud) {
         return clienteWebClientes.buscarCliente(solicitud.getDocumentoIdentidad())
-                .flatMap(cliente -> {
-                    if (cliente == null) {
-                        return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_CONSULTA_CLIENTE.getMensaje()));
-                    }
-                    solicitud.setEmail(cliente.getEmail());
+                .switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)))
+                .flatMap(clienteRespuesta -> {
+                    solicitud.setEmail(clienteRespuesta.getData().getEmail());
                     return Mono.just(solicitud);
                 })
-                .onErrorResume(e -> {
-                    return Mono.error(new ParametroNoValidoException(ErroresEnum.ERROR_CONSULTA_CLIENTE.getMensaje()));
-                });
+                .onErrorResume(e -> Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)));
     }
-
-
 }
