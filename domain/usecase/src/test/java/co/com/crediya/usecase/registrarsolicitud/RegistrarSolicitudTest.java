@@ -91,7 +91,7 @@ class RegistrarSolicitudTest {
     void registrarConExito() {
         Solicitud solicitud = generarSolicitud();
         SolicitudCreada solicitudCreada = generarSolicitudCreada();
-        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitudCreada));
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
 
         StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectNext(solicitudCreada)

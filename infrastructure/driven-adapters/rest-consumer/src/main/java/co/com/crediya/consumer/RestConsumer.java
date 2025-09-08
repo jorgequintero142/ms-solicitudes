@@ -24,7 +24,6 @@ public class RestConsumer implements ClienteWebClientes {
 
     @Override
     public Mono<InformacionUsuarioToken> buscarUsuarioPorToken(String token) {
-        System.out.println("buscarUsuarioPorToken");
         return client
                 .get()
                 .uri("/api/v1/validartoken")
