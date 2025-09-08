@@ -54,13 +54,15 @@ public class RegistrarSolicitudUseCase {
     }
 
     private Mono<Void> validarDatosBasicos(Solicitud solicitud) {
-        if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO) {
-            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
-        }
-        if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0) {
-            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
-        }
-        return Mono.empty();
+        return Mono.defer(() -> {
+            if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO) {
+                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
+            }
+            if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0) {
+                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
+            }
+            return Mono.empty();
+        });
     }
 
     private Mono<TipoPrestamo> buscarTipoPrestamo(Solicitud solicitud) {
