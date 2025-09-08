@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono;
 
 public interface SolicitudRepository {
 
-    Mono<SolicitudCreada> registrar(Solicitud solicitud);
+    Mono<Solicitud> registrar(Solicitud solicitud);
 }

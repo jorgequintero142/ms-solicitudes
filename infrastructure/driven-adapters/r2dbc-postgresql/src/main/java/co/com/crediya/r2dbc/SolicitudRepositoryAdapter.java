@@ -30,14 +30,14 @@ public class SolicitudRepositoryAdapter extends ReactiveAdapterOperations<
     }
 
     @Override
-    public Mono<SolicitudCreada> registrar(Solicitud solicitud) {
+    public Mono<Solicitud> registrar(Solicitud solicitud) {
         SolicitudEntity entity = mapper.map(solicitud, SolicitudEntity.class);
         entity.setIdSolicitud(null);
         entity.setIdEstado(ESTADO_PENDIENTE);
         return repository.save(entity)
                 .map(saved ->
-                        mapper.map(saved, SolicitudCreada.class)
+                        mapper.map(saved, Solicitud.class)
                 ).as(operadorTransaccion::transactional)
-                .doOnNext(u -> logger.debug("Se ha registrado una nueva solicitud "));
+                .doOnNext(u -> logger.debug("Se ha registrado una nueva solicitud {}", solicitud));
     }
 }

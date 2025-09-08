@@ -1,4 +1,4 @@
-package co.com.crediya.model.solicitud.request;
+package co.com.crediya.model.solicitud.dto;
 
 
 import lombok.AllArgsConstructor;

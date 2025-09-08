@@ -79,13 +79,25 @@ public class SolicitudHandler {
                     )
             }
     )
+
     public Mono<ServerResponse> registrar(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(Solicitud.class)
-                .flatMap(registrarSolicitudUseCase::registrar)
+                .flatMap(solicitud ->
+                        leerBearerToken(serverRequest)
+                                .flatMap(token ->
+                                        registrarSolicitudUseCase.registrar(solicitud, token)
+                                )
+                )
                 .flatMap(solicitudGuardada -> {
                             RespuestaApi<SolicitudCreada> respuesta = new RespuestaApi<>(SolicitudHandler.CODIGO_ESTADO_OK, SolicitudHandler.SOLICITUD_CREADA, solicitudGuardada);
                             return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(respuesta);
                         }
                 );
+    }
+
+    private Mono<String> leerBearerToken(ServerRequest request) {
+        return Mono.justOrEmpty(request.headers().firstHeader("Authorization"))
+                .filter(authHeader -> authHeader.startsWith("Bearer "))
+                .map(authHeader -> authHeader.substring("Bearer ".length()));
     }
 }

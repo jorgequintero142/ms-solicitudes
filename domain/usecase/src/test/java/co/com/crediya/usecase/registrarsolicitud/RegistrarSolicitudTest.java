@@ -9,8 +9,8 @@ import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
 import co.com.crediya.model.solicitud.gateways.EstadoRepository;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.solicitud.gateways.TipoPrestamoRepository;
-import co.com.crediya.model.solicitud.request.DatosUsuario;
-import co.com.crediya.model.solicitud.request.UsuarioResponse;
+import co.com.crediya.model.solicitud.dto.DatosUsuario;
+import co.com.crediya.model.solicitud.dto.UsuarioResponse;
 import co.com.crediya.usecase.Constantes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,7 +93,7 @@ class RegistrarSolicitudTest {
         SolicitudCreada solicitudCreada = generarSolicitudCreada();
         when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitudCreada));
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectNext(solicitudCreada)
                 .verifyComplete();
         verify(solicitudRepository).registrar(solicitud);
@@ -104,7 +104,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
 
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.empty());
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -119,7 +119,7 @@ class RegistrarSolicitudTest {
 
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(tipoPrestamo));
         when(clienteWebClientes.buscarCliente(anyString())).thenReturn(Mono.empty());
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -134,7 +134,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
         solicitud.setPlazo(4);
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -148,7 +148,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
         solicitud.setMonto(new BigDecimal("0"));
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;

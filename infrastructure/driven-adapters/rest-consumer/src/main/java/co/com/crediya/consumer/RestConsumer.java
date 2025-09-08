@@ -1,7 +1,8 @@
 package co.com.crediya.consumer;
 
+import co.com.crediya.model.solicitud.dto.InformacionUsuarioToken;
 import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
-import co.com.crediya.model.solicitud.request.UsuarioResponse;
+import co.com.crediya.model.solicitud.dto.UsuarioResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -19,5 +20,16 @@ public class RestConsumer implements ClienteWebClientes {
                 .uri("/api/v1/usuarios/{documentoIdentidad}", documentoIdentidad)
                 .retrieve()
                 .bodyToMono(UsuarioResponse.class);
+    }
+
+    @Override
+    public Mono<InformacionUsuarioToken> buscarUsuarioPorToken(String token) {
+        System.out.println("buscarUsuarioPorToken");
+        return client
+                .get()
+                .uri("/api/v1/validartoken")
+                .header("Authorization", "Bearer " + token)
+                .retrieve()
+                .bodyToMono(InformacionUsuarioToken.class);
     }
 }
