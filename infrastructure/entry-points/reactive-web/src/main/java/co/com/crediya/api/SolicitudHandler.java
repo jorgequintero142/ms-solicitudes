@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -25,6 +27,8 @@ public class SolicitudHandler {
     private final RegistrarSolicitudUseCase registrarSolicitudUseCase;
     private static final String SOLICITUD_CREADA = "Solicitud creada";
     private static final int CODIGO_ESTADO_OK = 200;
+
+    private static final Logger logger = LoggerFactory.getLogger(SolicitudHandler.class);
 
     @Operation(
             summary = "Crear un nueva solicitud de prestamo",
@@ -88,11 +92,15 @@ public class SolicitudHandler {
     )
     public Mono<ServerResponse> registrar(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(Solicitud.class)
+                .doOnNext(solicitudRecibida -> logger.info("SolicitudHandler::registrar request {}", solicitudRecibida))
                 .flatMap(solicitud ->
                         leerBearerToken(serverRequest)
                                 .flatMap(token ->
                                     registrarSolicitudUseCase.registrar(solicitud, token)
                                 )
+                                .doOnSuccess(solicitudCreada -> logger.info("SolicitudHandler::registrar response {}", solicitudCreada))
+                                .doOnError(error -> logger.error("SolicitudHandler::registrar error", error))
+
                 )
                 .flatMap(solicitudGuardada -> {
                             RespuestaApi<SolicitudCreada> respuesta = new RespuestaApi<>(SolicitudHandler.CODIGO_ESTADO_OK, SolicitudHandler.SOLICITUD_CREADA, solicitudGuardada);
