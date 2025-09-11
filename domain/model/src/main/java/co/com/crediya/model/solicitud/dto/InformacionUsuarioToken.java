@@ -6,10 +6,10 @@ import lombok.*;
 @AllArgsConstructor
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @ToString
 public class InformacionUsuarioToken {
-    private String rol;
-    private String documento;
-    private String subject;
+    private int estado;
+    private String mensaje;
+    private InformacionUsuario data;
 }

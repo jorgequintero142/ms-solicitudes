@@ -3,12 +3,15 @@ package co.com.crediya.api;
 import co.com.crediya.api.dto.RespuestaApi;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.SolicitudCreada;
+import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
+import co.com.crediya.usecase.Constantes;
 import co.com.crediya.usecase.registrarsolicitud.RegistrarSolicitudUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -24,8 +27,9 @@ public class SolicitudHandler {
     private static final int CODIGO_ESTADO_OK = 200;
 
     @Operation(
-            summary = "Crear un nueva solicitud",
+            summary = "Crear un nueva solicitud de prestamo",
             description = "Crea una nueva solicitud en el sistema",
+            security = @SecurityRequirement(name = "bearerAuth"),
             tags = {"Solicitudes"},
             requestBody = @RequestBody(
                     required = true,
@@ -35,7 +39,7 @@ public class SolicitudHandler {
                                             {
                                               "monto": 100000,
                                               "plazo": 6,
-                                              "documentoIdentidad": "444444",
+                                              "documentoIdentidad": "1757553740",
                                               "idTipoPrestamo": 2
                                             }
                                             """
@@ -50,13 +54,16 @@ public class SolicitudHandler {
                                     schema = @Schema(
                                             example = """
                                                     {
-                                                      "idSolicitud": 32,
-                                                      "monto": 100000,
-                                                      "plazo": 6,
-                                                      "email": "pedroperez@email.com",
-                                                      "documentoIdentidad": "444444",
-                                                      "idEstado": 1,
-                                                      "idTipoPrestamo": 2
+                                                        "estado": 200,
+                                                        "mensaje": "Solicitud creada",
+                                                        "data": {
+                                                            "estado": "Pendiente de revisión",
+                                                            "tipoPrestamo": "Vivienda",
+                                                            "monto": 100000,
+                                                            "plazo": 6,
+                                                            "documentoIdentidad": "1757553740",
+                                                            "email": "Eloisa_Boyle@yahoo.com"
+                                                        }
                                                     }
                                                     """
                                     )
@@ -69,23 +76,22 @@ public class SolicitudHandler {
                                     schema = @Schema(
                                             example = """
                                                     {
-                                                      "error": "Validación fallida",
-                                                      "message": "No existe tipo de prestamo",
-                                                      "status": 400
-                                                    }
+                                                         "estado": 400,
+                                                         "mensaje": "Validación fallida",
+                                                         "error": "Plazo no es correcto"
+                                                     }
                                                     """
                                     )
                             )
                     )
             }
     )
-
     public Mono<ServerResponse> registrar(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(Solicitud.class)
                 .flatMap(solicitud ->
                         leerBearerToken(serverRequest)
                                 .flatMap(token ->
-                                        registrarSolicitudUseCase.registrar(solicitud, token)
+                                    registrarSolicitudUseCase.registrar(solicitud, token)
                                 )
                 )
                 .flatMap(solicitudGuardada -> {
@@ -96,8 +102,16 @@ public class SolicitudHandler {
     }
 
     private Mono<String> leerBearerToken(ServerRequest request) {
-        return Mono.justOrEmpty(request.headers().firstHeader("Authorization"))
-                .filter(authHeader -> authHeader.startsWith("Bearer "))
-                .map(authHeader -> authHeader.substring("Bearer ".length()));
+        return
+                Mono.defer(() -> {
+                    if (request.headers() == null || 
+                            request.headers().firstHeader("Authorization") == null
+                    ) {
+                        return Mono.error(new ParametroNoValidoException(Constantes.ERROR_TOKEN));
+                    }
+                   return Mono.just(request.headers().firstHeader("Authorization"))
+                            .filter(authHeader -> authHeader.startsWith("Bearer "))
+                            .map(authHeader -> authHeader.substring("Bearer ".length()));
+                });
     }
 }

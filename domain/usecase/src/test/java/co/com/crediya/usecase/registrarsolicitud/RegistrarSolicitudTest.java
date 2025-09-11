@@ -4,6 +4,8 @@ import co.com.crediya.model.solicitud.Estado;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.SolicitudCreada;
 import co.com.crediya.model.solicitud.TipoPrestamo;
+import co.com.crediya.model.solicitud.dto.InformacionUsuario;
+import co.com.crediya.model.solicitud.dto.InformacionUsuarioToken;
 import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
 import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
 import co.com.crediya.model.solicitud.gateways.EstadoRepository;
@@ -34,6 +36,8 @@ class RegistrarSolicitudTest {
     private ClienteWebClientes clienteWebClientes;
     private UsuarioResponse usuarioResponse;
     private DatosUsuario datosUsuario;
+    private InformacionUsuarioToken informacionUsuarioToken;
+    private InformacionUsuario informacionUsuario;
 
 
     private Estado estado;
@@ -48,9 +52,8 @@ class RegistrarSolicitudTest {
         registrarSolicitudUseCase = new RegistrarSolicitudUseCase(solicitudRepository, tipoPrestamoRepository, estadoRepository, clienteWebClientes);
 
         estado = new Estado();
-        estado.setDescripcion("Pendiente");
         estado.setIdEstado(1);
-        estado.setDescripcion("Pendiente aprobación");
+        estado.setNombre("Pendiente aprobación");
 
         tipoPrestamo = new TipoPrestamo();
         tipoPrestamo.setIdTipoPrestamo(1);
@@ -61,7 +64,22 @@ class RegistrarSolicitudTest {
         datosUsuario.setEmail("mail@mail.com");
         usuarioResponse.setData(datosUsuario);
 
-        when(clienteWebClientes.buscarCliente(anyString())).thenReturn(Mono.just(usuarioResponse));
+
+        informacionUsuario =InformacionUsuario.builder()
+                        .rol("Cliente")
+                .subject("mail@mail.com")
+                .documento("10922123")
+                .build();
+
+       informacionUsuarioToken = InformacionUsuarioToken
+               .builder()
+               .mensaje("ok")
+               .data(informacionUsuario)
+               .estado(200)
+               .build();
+
+
+        when(clienteWebClientes.buscarUsuarioPorToken(anyString())).thenReturn(Mono.just(informacionUsuarioToken));
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(tipoPrestamo));
         when(estadoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(estado));
 
@@ -73,6 +91,7 @@ class RegistrarSolicitudTest {
         solicitud.setMonto(BigDecimal.valueOf(400000));
         solicitud.setDocumentoIdentidad("10922123");
         solicitud.setIdTipoPrestamo(1);
+        solicitud.setEmail("mail@mail.com");
         return solicitud;
     }
 
@@ -81,8 +100,8 @@ class RegistrarSolicitudTest {
         solicitudCreada.setPlazo(6);
         solicitudCreada.setMonto(BigDecimal.valueOf(400000));
         solicitudCreada.setDocumentoIdentidad("10922123");
-        solicitudCreada.setIdTipoPrestamo(1);
-        solicitudCreada.setEstado("Pendiente");
+        solicitudCreada.setEstado("Pendiente aprobación");
+        solicitudCreada.setEmail("mail@mail.com");
         solicitudCreada.setTipoPrestamo("Personal");
         return solicitudCreada;
     }
@@ -91,10 +110,12 @@ class RegistrarSolicitudTest {
     void registrarConExito() {
         Solicitud solicitud = generarSolicitud();
         SolicitudCreada solicitudCreada = generarSolicitudCreada();
-        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitudCreada));
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
 
         StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
-                .expectNext(solicitudCreada)
+                .expectNextMatches(u->
+                        u.getEstado().equals(solicitudCreada.getEstado())
+                )
                 .verifyComplete();
         verify(solicitudRepository).registrar(solicitud);
     }
@@ -118,7 +139,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
 
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(tipoPrestamo));
-        when(clienteWebClientes.buscarCliente(anyString())).thenReturn(Mono.empty());
+        when(clienteWebClientes.buscarUsuarioPorToken(anyString())).thenReturn(Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)));
         StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
@@ -153,6 +174,35 @@ class RegistrarSolicitudTest {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
                     assertThat(ex.getError()).isEqualTo(Constantes.ERROR_VALOR_MONTO);
+                })
+                .verify();
+    }
+
+    @Test
+    void errorConPermisosRol() {
+        Solicitud solicitud = generarSolicitud();
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
+        informacionUsuario.setRol("RolError");
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(ParametroNoValidoException.class);
+                    ParametroNoValidoException ex = (ParametroNoValidoException) error;
+                    assertThat(ex.getError()).isEqualTo(Constantes.ERROR_ROL_CREAR_SOLICITUD);
+                })
+                .verify();
+    }
+
+    @Test
+    void errorConPermisosDocumento() {
+        Solicitud solicitud = generarSolicitud();
+        solicitud.setDocumentoIdentidad("1234Fail");
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
+
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(ParametroNoValidoException.class);
+                    ParametroNoValidoException ex = (ParametroNoValidoException) error;
+                    assertThat(ex.getError()).isEqualTo(Constantes.ERROR_DOCUMENTO_SOLICITUD);
                 })
                 .verify();
     }

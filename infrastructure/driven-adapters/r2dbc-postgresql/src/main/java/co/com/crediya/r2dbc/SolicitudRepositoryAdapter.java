@@ -1,7 +1,6 @@
 package co.com.crediya.r2dbc;
 
 import co.com.crediya.model.solicitud.Solicitud;
-import co.com.crediya.model.solicitud.SolicitudCreada;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.r2dbc.entity.SolicitudEntity;
 import co.com.crediya.r2dbc.helper.ReactiveAdapterOperations;

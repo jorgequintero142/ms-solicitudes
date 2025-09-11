@@ -16,7 +16,6 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class RegistrarSolicitudUseCase {
 
-
     private final SolicitudRepository solicitudRepository;
     private final TipoPrestamoRepository tipoPrestamoRepository;
     private final EstadoRepository estadoRepository;
@@ -48,19 +47,31 @@ public class RegistrarSolicitudUseCase {
     }
 
     private Mono<Solicitud> validarSolicitud(Solicitud solicitud, String token) {
-        return validarDatosBasicos(solicitud)
+        return validarCliente(solicitud, token)
+                .then(validarPlazo(solicitud))
                 .then(validarTipoPrestamo(solicitud))
-                .then(validarCliente(solicitud, token));
+                .then(validarMonto(solicitud))
+                .then(Mono.just(solicitud));
     }
 
-    private Mono<Void> validarDatosBasicos(Solicitud solicitud) {
-        if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO) {
-            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
-        }
-        if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0) {
-            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
-        }
-        return Mono.empty();
+
+    private Mono<Void> validarPlazo(Solicitud solicitud) {
+        return Mono.defer(() -> {
+            if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO)  {
+                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
+            }
+            return Mono.empty();
+        });
+    }
+
+    private Mono<Void> validarMonto(Solicitud solicitud) {
+
+        return Mono.defer(() -> {
+            if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0)  {
+                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
+            }
+            return Mono.empty();
+        });
     }
 
     private Mono<TipoPrestamo> buscarTipoPrestamo(Solicitud solicitud) {
@@ -79,9 +90,9 @@ public class RegistrarSolicitudUseCase {
                 .buscarUsuarioPorToken(token)
                 .onErrorResume(throwable -> Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)))
                 .flatMap(informacionUsuarioToken ->
-                        verificarPermisos(informacionUsuarioToken.getDocumento(), informacionUsuarioToken.getRol(), solicitud)
+                        verificarPermisos(informacionUsuarioToken.getData().getDocumento(), informacionUsuarioToken.getData().getRol(), solicitud)
                                 .flatMap(solicitud1 -> {
-                                    solicitud.setEmail(informacionUsuarioToken.getSubject());
+                                    solicitud.setEmail(informacionUsuarioToken.getData().getSubject());
                                     return Mono.just(solicitud);
                                 })
                 );

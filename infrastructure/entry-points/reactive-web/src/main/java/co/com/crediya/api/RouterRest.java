@@ -10,6 +10,7 @@ import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
@@ -21,36 +22,9 @@ public class RouterRest {
     @Bean
     @RouterOperations({@RouterOperation(
             path = "/api/v1/solicitud",
+            method = RequestMethod.POST,
             beanClass = SolicitudHandler.class,
-            beanMethod = "registrar",
-            operation = @Operation(
-                    summary = "Crear un nueva solicitud",
-                    description = "Crea una nueva solicitud en el sistema",
-                    tags = {"Solicitudes"},
-                    requestBody = @RequestBody(
-                            required = true,
-                            content = @Content(
-                                    schema = @Schema(
-                                            implementation = Solicitud.class
-                                    )
-                            )
-                    ),
-                    responses = {
-                            @ApiResponse(
-                                    responseCode = "200",
-                                    description = "Solicitud creada",
-                                    content = @Content(
-                                            schema = @io.swagger.v3.oas.annotations.media.Schema(
-                                                    implementation = Solicitud.class
-                                            )
-                                    )
-                            ),
-                            @ApiResponse(
-                                    responseCode = "400",
-                                    description = "Validación fallida"
-                            )
-                    }
-            )
+            beanMethod = "registrar"
     )})
     public RouterFunction<ServerResponse> routerFunction(SolicitudHandler handler) {
         return route(
