@@ -14,10 +14,11 @@ public class RestConsumer implements ClienteWebClientes {
     private final WebClient client;
 
     @Override
-    public Mono<UsuarioResponse> buscarCliente(String documentoIdentidad) {
+    public Mono<UsuarioResponse> buscarCliente(String documentoIdentidad, String token) {
         return client
                 .get()
                 .uri("/api/v1/usuarios/{documentoIdentidad}", documentoIdentidad)
+                .header("Authorization", "Bearer " + token)
                 .retrieve()
                 .bodyToMono(UsuarioResponse.class);
     }

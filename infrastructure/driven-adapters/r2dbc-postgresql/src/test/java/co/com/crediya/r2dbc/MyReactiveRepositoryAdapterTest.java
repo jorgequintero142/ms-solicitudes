@@ -1,5 +1,7 @@
 package co.com.crediya.r2dbc;
 
+import co.com.crediya.r2dbc.solicitud.SolicitudReactiveRepository;
+import co.com.crediya.r2dbc.solicitud.SolicitudRepositoryAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
