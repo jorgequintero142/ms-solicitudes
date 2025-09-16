@@ -1,4 +1,4 @@
-package co.com.crediya.r2dbc;
+package co.com.crediya.r2dbc.catalogos;
 
 import co.com.crediya.model.solicitud.Estado;
 import co.com.crediya.model.solicitud.gateways.EstadoRepository;

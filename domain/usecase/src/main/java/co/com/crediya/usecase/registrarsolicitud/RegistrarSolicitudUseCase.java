@@ -22,8 +22,8 @@ public class RegistrarSolicitudUseCase {
     private final ClienteWebClientes clienteWebClientes;
     private static final String ROL_CREAR_SOLICITUD = "Cliente";
 
-    public Mono<SolicitudCreada> registrar(Solicitud solicitud, String token) {
-        return validarSolicitud(solicitud, token)
+    public Mono<SolicitudCreada> registrar(Solicitud solicitud) {
+        return validarSolicitud(solicitud)
                 .flatMap(solicitudRepository::registrar)
                 .flatMap(nuevaSolicitud -> buscarEstado(Constantes.ESTADO_PENDIENTE)
                         .flatMap(estado -> buscarTipoPrestamo(nuevaSolicitud)
@@ -46,8 +46,8 @@ public class RegistrarSolicitudUseCase {
         return estadoRepository.buscarPorId(idEstado);
     }
 
-    private Mono<Solicitud> validarSolicitud(Solicitud solicitud, String token) {
-        return validarCliente(solicitud, token)
+    private Mono<Solicitud> validarSolicitud(Solicitud solicitud) {
+        return validarCliente(solicitud)
                 .then(validarPlazo(solicitud))
                 .then(validarTipoPrestamo(solicitud))
                 .then(validarMonto(solicitud))
@@ -84,10 +84,10 @@ public class RegistrarSolicitudUseCase {
         return buscarTipoPrestamo(solicitud).switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ERROR_TIPO_PRESTAMO)));
     }
 
-    private Mono<Solicitud> validarCliente(Solicitud solicitud, String token) {
+    private Mono<Solicitud> validarCliente(Solicitud solicitud) {
 
         return clienteWebClientes
-                .buscarUsuarioPorToken(token)
+                .buscarUsuarioPorToken()
                 .onErrorResume(throwable -> Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)))
                 .flatMap(informacionUsuarioToken ->
                         verificarPermisos(informacionUsuarioToken.getData().getDocumento(), informacionUsuarioToken.getData().getRol(), solicitud)
