@@ -17,7 +17,7 @@ public class BuscarSolicitudesUseCase {
     private final DetalleSolicitudRepository solicitudRepository;
     private final ClienteWebClientes clienteWebClientes;
 
-    public Flux<DetalleSolicitudDTO> buscarSolicitudes(ParametrosBusqueda parametrosBusqueda, String token) {
+    public Flux<DetalleSolicitudDTO> buscarSolicitudes(ParametrosBusqueda parametrosBusqueda) {
 
        return  Flux.fromArray(parametrosBusqueda.estados.split(","))
                 .map(String::trim)
@@ -25,23 +25,23 @@ public class BuscarSolicitudesUseCase {
                 .collectList()
                 .doOnNext(parametrosBusqueda::setCodigosEstado)
                 .flatMapMany(list -> solicitudRepository.buscarSolicitudes(parametrosBusqueda))
-               .flatMap(detalleSolicitudDTO -> obtenerInformacionUsuario(detalleSolicitudDTO,token));
+               .flatMap(detalleSolicitudDTO -> obtenerInformacionUsuario(detalleSolicitudDTO));
 
          }
 
-    private Mono<DetalleSolicitudDTO> obtenerInformacionUsuario(DetalleSolicitudDTO detalleSolicitudDTO, String token) {
-        return buscarInformacionCliente(detalleSolicitudDTO.getDocumentoIdentidad(), token)
+    private Mono<DetalleSolicitudDTO> obtenerInformacionUsuario(DetalleSolicitudDTO detalleSolicitudDTO) {
+        return buscarInformacionCliente(detalleSolicitudDTO.getDocumentoIdentidad())
                 .map(datosUsuario -> {
-
                     detalleSolicitudDTO.setNombre(String.format("%s %s",datosUsuario.getNombre(),datosUsuario.getApellido()));
                     detalleSolicitudDTO.setSalarioBase(datosUsuario.getSalarioBase());
                     return detalleSolicitudDTO;
                 });
     }
 
-    private Mono<DatosUsuario> buscarInformacionCliente(String documentoIdentidad, String token) {
-        return clienteWebClientes.buscarCliente(documentoIdentidad, token)
-                .onErrorResume(e ->  Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)))
+    private Mono<DatosUsuario> buscarInformacionCliente(String documentoIdentidad) {
+        return clienteWebClientes.buscarCliente(documentoIdentidad)
+                .onErrorResume(e ->  Mono.error(new ParametroNoValidoException(Constantes.ERROR_DE_COMUNICACION)))
+                .switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)))
                 .flatMap(cliente ->
                      Mono.just(cliente.getData())
                 );

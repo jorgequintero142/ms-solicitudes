@@ -12,7 +12,7 @@ public class Constantes {
     public static final String ERROR_PLAZO = "Plazo no es correcto";
     public static final String ERROR_TIPO_PRESTAMO = "No existe tipo de prestamo";
     public static final String ERROR_CONSULTA_CLIENTE = "No se encontró información del cliente";
-
+    public static final String ERROR_DE_COMUNICACION = "Error inesperado con la consulta a cliente";
 
     public static final String ERROR_INESPERADO = "Error inesperado";
     public static final String MENSAJE_ERROR_INESPERADO = "Intente más tarde";

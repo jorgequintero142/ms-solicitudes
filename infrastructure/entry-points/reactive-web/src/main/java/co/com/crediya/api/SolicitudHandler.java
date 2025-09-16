@@ -4,8 +4,6 @@ import co.com.crediya.api.dto.RespuestaApi;
 import co.com.crediya.model.detallesolicitud.ParametrosBusqueda;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.SolicitudCreada;
-import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
-import co.com.crediya.usecase.Constantes;
 import co.com.crediya.usecase.buscarsolicitudes.BuscarSolicitudesUseCase;
 import co.com.crediya.usecase.registrarsolicitud.RegistrarSolicitudUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -101,10 +99,7 @@ public class SolicitudHandler {
         return serverRequest.bodyToMono(Solicitud.class)
                 .doOnNext(solicitudRecibida -> logger.info("SolicitudHandler::registrar request {}", solicitudRecibida))
                 .flatMap(solicitud ->
-                        leerBearerToken(serverRequest)
-                                .flatMap(token ->
-                                    registrarSolicitudUseCase.registrar(solicitud, token)
-                                )
+                                    registrarSolicitudUseCase.registrar(solicitud)
                                 .doOnSuccess(solicitudCreada -> logger.info("SolicitudHandler::registrar response {}", solicitudCreada))
                                 .doOnError(error -> logger.error("SolicitudHandler::registrar error", error))
 
@@ -115,22 +110,6 @@ public class SolicitudHandler {
                         }
                 );
     }
-
-    private Mono<String> leerBearerToken(ServerRequest request) {
-        return
-                Mono.defer(() -> {
-                    if (request.headers() == null || 
-                            request.headers().firstHeader("Authorization") == null
-                    ) {
-                        return Mono.error(new ParametroNoValidoException(Constantes.ERROR_TOKEN));
-                    }
-                   return Mono.just(request.headers().firstHeader("Authorization"))
-                            .filter(authHeader -> authHeader.startsWith("Bearer "))
-                            .map(authHeader -> authHeader.substring("Bearer ".length()));
-                });
-    }
-
-
 
     @Operation(
             summary = "Buscador de solicitudes",
@@ -210,7 +189,7 @@ public class SolicitudHandler {
                     .pagina(Integer.parseInt(pagina)-1)
                     .totalRegistros(Integer.parseInt(cantidad))
                     .build();
-            return   leerBearerToken(serverRequest).flatMap(token ->   buscarSolicitudesUseCase.buscarSolicitudes(parametrosBusqueda, token)
+            return   buscarSolicitudesUseCase.buscarSolicitudes(parametrosBusqueda)
                     .collectList()
                     .map(detallesSolicitud ->
                             new RespuestaApi<>(
@@ -224,7 +203,7 @@ public class SolicitudHandler {
                             ServerResponse.ok()
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .bodyValue(respuesta)
-                    ));
+                    );
         });
     }
 
