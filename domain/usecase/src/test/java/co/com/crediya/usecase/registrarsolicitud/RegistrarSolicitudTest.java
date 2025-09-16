@@ -4,15 +4,15 @@ import co.com.crediya.model.solicitud.Estado;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.SolicitudCreada;
 import co.com.crediya.model.solicitud.TipoPrestamo;
+import co.com.crediya.model.solicitud.dto.DatosUsuario;
 import co.com.crediya.model.solicitud.dto.InformacionUsuario;
 import co.com.crediya.model.solicitud.dto.InformacionUsuarioToken;
+import co.com.crediya.model.solicitud.dto.UsuarioResponse;
 import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
 import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
 import co.com.crediya.model.solicitud.gateways.EstadoRepository;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.solicitud.gateways.TipoPrestamoRepository;
-import co.com.crediya.model.solicitud.dto.DatosUsuario;
-import co.com.crediya.model.solicitud.dto.UsuarioResponse;
 import co.com.crediya.usecase.Constantes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,8 @@ import reactor.test.StepVerifier;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -79,7 +80,7 @@ class RegistrarSolicitudTest {
                .build();
 
 
-        when(clienteWebClientes.buscarUsuarioPorToken(anyString())).thenReturn(Mono.just(informacionUsuarioToken));
+        when(clienteWebClientes.buscarUsuarioPorToken()).thenReturn(Mono.just(informacionUsuarioToken));
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(tipoPrestamo));
         when(estadoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(estado));
 
@@ -112,7 +113,7 @@ class RegistrarSolicitudTest {
         SolicitudCreada solicitudCreada = generarSolicitudCreada();
         when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectNextMatches(u->
                         u.getEstado().equals(solicitudCreada.getEstado())
                 )
@@ -125,7 +126,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
 
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.empty());
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -139,8 +140,8 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
 
         when(tipoPrestamoRepository.buscarPorId(anyInt())).thenReturn(Mono.just(tipoPrestamo));
-        when(clienteWebClientes.buscarUsuarioPorToken(anyString())).thenReturn(Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)));
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        when(clienteWebClientes.buscarUsuarioPorToken()).thenReturn(Mono.error(new ParametroNoValidoException(Constantes.ERROR_CONSULTA_CLIENTE)));
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -155,7 +156,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
         solicitud.setPlazo(4);
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -169,7 +170,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
         solicitud.setMonto(new BigDecimal("0"));
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -183,7 +184,7 @@ class RegistrarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
         when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
         informacionUsuario.setRol("RolError");
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;
@@ -198,7 +199,7 @@ class RegistrarSolicitudTest {
         solicitud.setDocumentoIdentidad("1234Fail");
         when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
 
-        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud, ""))
+        StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
                     assertThat(error).isInstanceOf(ParametroNoValidoException.class);
                     ParametroNoValidoException ex = (ParametroNoValidoException) error;

@@ -27,15 +27,12 @@ cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
 adapters:
   r2dbc:
-    host: "localhost"
-    port: 5432
-    database: "solicitudes"
+    host: ${DB_HOST}
+    port: ${DB_PORT}
+    database: ${DB_NAME}
     schema: "public"
-    username: "test"
-    password: "P@55w0rd"
-  restconsumer:
-    url: "http://localhost:8080"
-    timeout: "40000"
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
 springdoc:
   api-docs:
     enabled: true
@@ -46,7 +43,7 @@ springdoc:
 adapter:
   restconsumer:
     timeout: 5000
-    url: "http://localhost:8080"
+    url: "http://autenticacion:8080"
 resilience4j:
   circuitbreaker:
     instances:
