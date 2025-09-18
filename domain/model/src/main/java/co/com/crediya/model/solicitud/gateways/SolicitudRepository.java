@@ -6,4 +6,6 @@ import reactor.core.publisher.Mono;
 public interface SolicitudRepository {
 
     Mono<Solicitud> registrar(Solicitud solicitud);
+
+    Mono<Solicitud> aprobarRechazar(Integer idSolicitud, Integer idEstado);
 }

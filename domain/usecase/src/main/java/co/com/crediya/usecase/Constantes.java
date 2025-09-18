@@ -24,5 +24,7 @@ public class Constantes {
     public static final String ERROR_DOCUMENTO_SOLICITUD = "El número de documento de la solicitud, no corresponde con el tuyo";
     public static final String ERROR_ROL_CREAR_SOLICITUD = "Con tu rol no se permite crear solicitudes";
 
-    public static final String ERROR_TOKEN = "No se envió token de seguridad";
+
+
+    public static final String ESTADO_ENVIADO_NO_PERMITDO ="Estado enviado no es permitido";
 }

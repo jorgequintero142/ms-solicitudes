@@ -1,9 +1,12 @@
 package co.com.crediya.api;
 
 import co.com.crediya.api.dto.RespuestaApi;
+import co.com.crediya.api.dto.RespuestaGenericaApi;
+import co.com.crediya.model.aprobarrechazarsolicitud.AprobarRechazarSolicitud;
 import co.com.crediya.model.detallesolicitud.ParametrosBusqueda;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.SolicitudCreada;
+import co.com.crediya.usecase.aprobarrechazarsolicitud.AprobarRechazarSolicitudUseCase;
 import co.com.crediya.usecase.buscarsolicitudes.BuscarSolicitudesUseCase;
 import co.com.crediya.usecase.registrarsolicitud.RegistrarSolicitudUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +31,7 @@ import reactor.core.publisher.Mono;
 public class SolicitudHandler {
     private final RegistrarSolicitudUseCase registrarSolicitudUseCase;
     private final BuscarSolicitudesUseCase buscarSolicitudesUseCase;
+    private  final AprobarRechazarSolicitudUseCase aprobarRechazarSolicitudUseCase;
 
     private static final String SOLICITUD_CREADA = "Solicitud creada";
     private static final String RESULTADOS_BUSQUEDA = "Resultados de la búsqueda";
@@ -99,7 +103,7 @@ public class SolicitudHandler {
         return serverRequest.bodyToMono(Solicitud.class)
                 .doOnNext(solicitudRecibida -> logger.info("SolicitudHandler::registrar request {}", solicitudRecibida))
                 .flatMap(solicitud ->
-                                    registrarSolicitudUseCase.registrar(solicitud)
+                        registrarSolicitudUseCase.registrar(solicitud)
                                 .doOnSuccess(solicitudCreada -> logger.info("SolicitudHandler::registrar response {}", solicitudCreada))
                                 .doOnError(error -> logger.error("SolicitudHandler::registrar error", error))
 
@@ -183,7 +187,7 @@ public class SolicitudHandler {
             String pagina = serverRequest.queryParam("pagina").orElse("1");
             String cantidad = serverRequest.queryParam("cantidad").orElse("10");
             String estados = serverRequest.queryParam("estado").orElse("PENDIENTE");
-             ParametrosBusqueda parametrosBusqueda = ParametrosBusqueda
+            ParametrosBusqueda parametrosBusqueda = ParametrosBusqueda
                     .builder()
                     .estados(estados)
                     .pagina(Integer.parseInt(pagina)-1)
@@ -207,4 +211,96 @@ public class SolicitudHandler {
         });
     }
 
+    @Operation(
+            summary = "",
+            description = "Aprobar o rechazar solicitud, cambiando estado",
+            security = @SecurityRequirement(name = "bearerAuth"),
+            tags = {"Solicitudes"},
+            parameters = {
+                    @Parameter(
+                            name = "idSolicitud",
+                            description = "Identificador de la solicitud",
+                            in = ParameterIn.PATH,
+                            required = true,
+                            schema = @Schema(type = "String", example = "123")
+                    )
+            },
+            requestBody = @RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(
+                                    example = """
+                                            {
+                                                    "estado": "APROBADO"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Aprobar/rechazar solicitud",
+                            content = @Content(
+                                    schema = @Schema(
+                                            example = """
+                                                    {
+                                                      "estado": 200,
+                                                      "mensaje": "Se ha aprobado la solicitud"
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Proceso falló",
+                            content = @Content(
+                                    schema = @Schema(
+                                            example = """
+                                                    {
+                                                         "estado": 400,
+                                                         "mensaje": "Proceso falló",
+                                                         "error": "Error durante la aprobación/rechazo de la solicitud"
+                                                     }
+                                                    """
+                                    )
+                            )
+                    )
+            }
+    )
+    public Mono<ServerResponse> aprobarRechazarSolicitud(ServerRequest serverRequest) {
+       return obtenerIdSolicitud(serverRequest)
+                .flatMap(idSolicitud ->
+                     serverRequest
+                            .bodyToMono(AprobarRechazarSolicitud.class)
+                            .flatMap(payload ->
+                                 aprobarRechazarSolicitudUseCase
+                                        .aprobarRechazar(idSolicitud,payload.getEstado())
+                                        .flatMap(
+                                                respuesta -> {
+                                                    RespuestaGenericaApi respuestaGenericaApi = RespuestaGenericaApi
+                                                            .builder()
+                                                            .mensaje(respuesta)
+                                                            .estado(CODIGO_ESTADO_OK)
+                                                            .build();
+                                                    return ServerResponse.ok()
+                                                            .contentType(MediaType.APPLICATION_JSON)
+                                                            .bodyValue(respuestaGenericaApi);
+                                                }
+
+
+                                        )
+                            )
+                        );
+    }
+
+    private Mono<Integer> obtenerIdSolicitud(ServerRequest serverRequest) {
+        return Mono.defer(() -> {
+            String solicitud =   serverRequest.pathVariable("idSolicitud");
+            int idSolicitud = Integer.parseInt(solicitud);
+            return Mono.just(idSolicitud);
+        });
+
+    }
 }
