@@ -2,6 +2,7 @@ package co.com.crediya.usecase.aprobarrechazarsolicitud;
 
 import co.com.crediya.model.aprobarrechazarsolicitud.ReporteAprobarRechazar;
 import co.com.crediya.model.aprobarrechazarsolicitud.gateways.AprobarRechazarSolicitudService;
+import co.com.crediya.model.gateways.PublicadorSQSService;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.dto.DatosUsuario;
 import co.com.crediya.model.solicitud.dto.UsuarioResponse;
@@ -24,7 +25,7 @@ class AprobarRechazarSolicitudTest {
     private AprobarRechazarSolicitudUseCase aprobarRechazarSolicitudUseCase;
     private  ClienteWebClientes clienteWebClientes;
     private  SolicitudRepository solicitudRepository;
-    private  AprobarRechazarSolicitudService aprobarRechazarSolicitudService;
+    private PublicadorSQSService publicadorSQSService;
     private final String documentoCliente =  "1234455";
     private final int CODIGO_SOLICITUD =123;
     private final String ESTADO ="APROBADA";
@@ -58,8 +59,8 @@ class AprobarRechazarSolicitudTest {
     void setUp() {
         solicitudRepository = Mockito.mock(SolicitudRepository.class);
         clienteWebClientes = Mockito.mock(ClienteWebClientes.class);
-        aprobarRechazarSolicitudService = Mockito.mock(AprobarRechazarSolicitudService.class);
-        aprobarRechazarSolicitudUseCase = new AprobarRechazarSolicitudUseCase(aprobarRechazarSolicitudService, solicitudRepository,clienteWebClientes);
+        publicadorSQSService = Mockito.mock(PublicadorSQSService.class);
+        aprobarRechazarSolicitudUseCase = new AprobarRechazarSolicitudUseCase(publicadorSQSService, solicitudRepository,clienteWebClientes);
     }
 
 
@@ -69,7 +70,7 @@ class AprobarRechazarSolicitudTest {
         Solicitud solicitud = generarSolicitud();
         when(solicitudRepository.aprobarRechazar(anyInt(), anyInt())).thenReturn(Mono.just(solicitud));
         when(clienteWebClientes.buscarCliente(anyString())).thenReturn(Mono.just(usuarioResponse));
-        when(aprobarRechazarSolicitudService.aprobarRechazarSolicitud(any(ReporteAprobarRechazar.class))).thenReturn(Mono.just(mensaje));
+        when(publicadorSQSService.send(any(ReporteAprobarRechazar.class))).thenReturn(Mono.just(mensaje));
         StepVerifier.create(aprobarRechazarSolicitudUseCase.aprobarRechazar(CODIGO_SOLICITUD, ESTADO))
                 .expectNext(PROCESO_OK)
                 .verifyComplete();

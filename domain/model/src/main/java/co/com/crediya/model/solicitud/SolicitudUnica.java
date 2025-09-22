@@ -10,7 +10,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 @ToString
-public class Solicitud {
+public class SolicitudUnica {
+    private Integer idSolicitud;
     private BigDecimal monto;
     private int plazo;
     private String documentoIdentidad;

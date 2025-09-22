@@ -1,6 +1,7 @@
 package co.com.crediya.r2dbc.solicitud;
 
 import co.com.crediya.model.solicitud.Solicitud;
+import co.com.crediya.model.solicitud.SolicitudUnica;
 import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.r2dbc.entity.SolicitudEntity;
@@ -14,7 +15,7 @@ import reactor.core.publisher.Mono;
 
 @Repository
 public class SolicitudRepositoryAdapter extends ReactiveAdapterOperations<
-        Solicitud,
+        SolicitudUnica,
         SolicitudEntity,
         Integer,
         SolicitudReactiveRepository
@@ -26,18 +27,18 @@ public class SolicitudRepositoryAdapter extends ReactiveAdapterOperations<
     private final TransactionalOperator operadorTransaccion;
 
     public SolicitudRepositoryAdapter(SolicitudReactiveRepository repository, ObjectMapper mapper, TransactionalOperator operadorTransaccion) {
-        super(repository, mapper, d -> mapper.map(d, Solicitud.class));
+        super(repository, mapper, d -> mapper.map(d, SolicitudUnica.class));
         this.operadorTransaccion = operadorTransaccion;
     }
 
     @Override
-    public Mono<Solicitud> registrar(Solicitud solicitud) {
+    public Mono<SolicitudUnica> registrar(Solicitud solicitud) {
         SolicitudEntity entity = mapper.map(solicitud, SolicitudEntity.class);
         entity.setIdSolicitud(null);
         entity.setIdEstado(ESTADO_PENDIENTE);
         return repository.save(entity)
                 .map(saved ->
-                        mapper.map(saved, Solicitud.class)
+                        mapper.map(saved, SolicitudUnica.class)
                 ).as(operadorTransaccion::transactional)
                 .doOnNext(u -> logger.debug("Se ha registrado una nueva solicitud {}", solicitud));
     }

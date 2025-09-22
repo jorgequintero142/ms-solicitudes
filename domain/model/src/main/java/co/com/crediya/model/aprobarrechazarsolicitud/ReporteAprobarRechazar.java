@@ -1,5 +1,6 @@
 package co.com.crediya.model.aprobarrechazarsolicitud;
 
+import co.com.crediya.model.gateways.PublicadoraMensajesSQS;
 import lombok.*;
 
 @Getter
@@ -7,7 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class ReporteAprobarRechazar {
+public class ReporteAprobarRechazar extends PublicadoraMensajesSQS {
     private String email;
     private String nombre;
     private String estado;
