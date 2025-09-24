@@ -14,13 +14,13 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class RestConsumer implements ClienteWebClientes {
     private final WebClient client;
-
+    public static final String ERROR_TOKEN = "No se envió token de seguridad";
     @Override
     public Mono<UsuarioResponse> buscarCliente(String documentoIdentidad) {
 
         return leerTokenFromSecurityContext()
-                .onErrorResume(throwable ->  Mono.error(new ParametroNoValidoException("Fockiu")))
-                .switchIfEmpty(Mono.error(new ParametroNoValidoException("Fockiu 2")))
+                .onErrorResume(throwable ->  Mono.error(new ParametroNoValidoException(ERROR_TOKEN)))
+                .switchIfEmpty(Mono.error(new ParametroNoValidoException(ERROR_TOKEN)))
                 .flatMap(tokens-> client
                 .get()
                 .uri("/api/v1/usuarios/{documentoIdentidad}", documentoIdentidad)
@@ -32,8 +32,8 @@ public class RestConsumer implements ClienteWebClientes {
     @Override
     public Mono<InformacionUsuarioToken> buscarUsuarioPorToken() {
              return leerTokenFromSecurityContext()
-                     .onErrorResume(throwable ->  Mono.error(new ParametroNoValidoException("Fockiu")))
-                     .switchIfEmpty(Mono.error(new ParametroNoValidoException("Fockiu 2")))
+                     .onErrorResume(throwable ->  Mono.error(new ParametroNoValidoException(ERROR_TOKEN)))
+                     .switchIfEmpty(Mono.error(new ParametroNoValidoException(ERROR_TOKEN)))
                      .flatMap(token ->  client
                              .get()
                              .uri("/api/v1/token")

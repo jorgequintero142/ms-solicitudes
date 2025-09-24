@@ -23,6 +23,12 @@ public class RouterRest {
                     method = RequestMethod.GET,
                     beanClass = SolicitudHandler.class,
                     beanMethod = "buscar"
+            ),
+            @RouterOperation(
+                    path = "/api/v1/solicitud/{idSolicitud}",
+                    method = RequestMethod.PUT,
+                    beanClass = SolicitudHandler.class,
+                    beanMethod = "aprobarRechazarSolicitud"
             )
     })
     public RouterFunction<ServerResponse> routerFunction(SolicitudHandler handler) {
@@ -30,6 +36,7 @@ public class RouterRest {
         return RouterFunctions.route()
                 .POST("/api/v1/solicitud", handler::registrar)
                 .GET("/api/v1/solicitud", handler::buscar)
+                .PUT("/api/v1/solicitud/{idSolicitud}", handler::aprobarRechazarSolicitud)
                 .build();
     }
 }

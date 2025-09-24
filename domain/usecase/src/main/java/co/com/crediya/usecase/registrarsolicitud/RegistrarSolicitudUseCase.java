@@ -10,8 +10,11 @@ import co.com.crediya.model.solicitud.gateways.EstadoRepository;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.solicitud.gateways.TipoPrestamoRepository;
 import co.com.crediya.usecase.Constantes;
+import co.com.crediya.usecase.calcularcapacidadendeudamiento.CalcularCapacidadEndeudamientoUseCase;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
+
+import java.math.BigDecimal;
 
 @RequiredArgsConstructor
 public class RegistrarSolicitudUseCase {
@@ -21,15 +24,15 @@ public class RegistrarSolicitudUseCase {
     private final EstadoRepository estadoRepository;
     private final ClienteWebClientes clienteWebClientes;
     private static final String ROL_CREAR_SOLICITUD = "Cliente";
+    private final CalcularCapacidadEndeudamientoUseCase calcularCapacidadEndeudamientoUseCase;
 
     public Mono<SolicitudCreada> registrar(Solicitud solicitud) {
         return validarSolicitud(solicitud)
                 .flatMap(solicitudRepository::registrar)
                 .flatMap(nuevaSolicitud -> buscarEstado(Constantes.ESTADO_PENDIENTE)
-                        .flatMap(estado -> buscarTipoPrestamo(nuevaSolicitud)
+                        .flatMap(estado -> buscarTipoPrestamo(nuevaSolicitud.getIdTipoPrestamo())
                                 .flatMap(tipoPrestamo -> {
-                                    SolicitudCreada solicitudCreada = SolicitudCreada
-                                            .builder()
+                                    SolicitudCreada solicitudCreada = SolicitudCreada.builder()
                                             .email(nuevaSolicitud.getEmail())
                                             .monto(nuevaSolicitud.getMonto())
                                             .plazo(nuevaSolicitud.getPlazo())
@@ -37,9 +40,16 @@ public class RegistrarSolicitudUseCase {
                                             .documentoIdentidad(nuevaSolicitud.getDocumentoIdentidad())
                                             .tipoPrestamo(tipoPrestamo.getNombre())
                                             .build();
-                                    return Mono.just(solicitudCreada);
-                                })));
 
+                                    if (solicitud.isValidacionAutomatica()) {
+                                        return realizarValidacionAutomatica(solicitud, tipoPrestamo.getTasaInteres(), nuevaSolicitud.getIdSolicitud())
+                                                .thenReturn(solicitudCreada);
+                                    }
+
+                                    return Mono.just(solicitudCreada);
+                                })
+                        )
+                );
     }
 
     private Mono<Estado> buscarEstado(int idEstado) {
@@ -57,7 +67,7 @@ public class RegistrarSolicitudUseCase {
 
     private Mono<Void> validarPlazo(Solicitud solicitud) {
         return Mono.defer(() -> {
-            if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO)  {
+            if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO) {
                 return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
             }
             return Mono.empty();
@@ -67,21 +77,21 @@ public class RegistrarSolicitudUseCase {
     private Mono<Void> validarMonto(Solicitud solicitud) {
 
         return Mono.defer(() -> {
-            if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0)  {
+            if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0) {
                 return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
             }
             return Mono.empty();
         });
     }
 
-    private Mono<TipoPrestamo> buscarTipoPrestamo(Solicitud solicitud) {
-        return tipoPrestamoRepository.buscarPorId(solicitud.getIdTipoPrestamo());
+    private Mono<TipoPrestamo> buscarTipoPrestamo(int solicitud) {
+        return tipoPrestamoRepository.buscarPorId(solicitud);
     }
 
 
     private Mono<TipoPrestamo> validarTipoPrestamo(Solicitud solicitud) {
 
-        return buscarTipoPrestamo(solicitud).switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ERROR_TIPO_PRESTAMO)));
+        return buscarTipoPrestamo(solicitud.getIdTipoPrestamo()).switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ERROR_TIPO_PRESTAMO)));
     }
 
     private Mono<Solicitud> validarCliente(Solicitud solicitud) {
@@ -100,13 +110,25 @@ public class RegistrarSolicitudUseCase {
 
     Mono<Solicitud> verificarPermisos(String documento, String rol, Solicitud solicitud) {
         return Mono.defer(() -> {
-            if (!documento.equals(solicitud.getDocumentoIdentidad())) {
-                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_DOCUMENTO_SOLICITUD));
-            }
+
             if (!ROL_CREAR_SOLICITUD.equals(rol)) {
                 return Mono.error(new ParametroNoValidoException(Constantes.ERROR_ROL_CREAR_SOLICITUD));
             }
+            if (!documento.equals(solicitud.getDocumentoIdentidad())) {
+                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_DOCUMENTO_SOLICITUD));
+            }
+
             return Mono.just(solicitud);
         });
+    }
+
+    Mono<Void> realizarValidacionAutomatica(Solicitud solicitud, BigDecimal tasaInteres, int idSolicitud) {
+        return clienteWebClientes.buscarCliente(solicitud.getDocumentoIdentidad()).flatMap(
+                usuarioResponse ->
+                        calcularCapacidadEndeudamientoUseCase
+                                .calcularCapacidadEndeudamiento(solicitud, usuarioResponse.getData(), tasaInteres, idSolicitud)
+                                .flatMap(s -> Mono.empty())
+
+        );
     }
 }

@@ -1,9 +1,6 @@
 package co.com.crediya.usecase.registrarsolicitud;
 
-import co.com.crediya.model.solicitud.Estado;
-import co.com.crediya.model.solicitud.Solicitud;
-import co.com.crediya.model.solicitud.SolicitudCreada;
-import co.com.crediya.model.solicitud.TipoPrestamo;
+import co.com.crediya.model.solicitud.*;
 import co.com.crediya.model.solicitud.dto.DatosUsuario;
 import co.com.crediya.model.solicitud.dto.InformacionUsuario;
 import co.com.crediya.model.solicitud.dto.InformacionUsuarioToken;
@@ -14,6 +11,7 @@ import co.com.crediya.model.solicitud.gateways.EstadoRepository;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.solicitud.gateways.TipoPrestamoRepository;
 import co.com.crediya.usecase.Constantes;
+import co.com.crediya.usecase.calcularcapacidadendeudamiento.CalcularCapacidadEndeudamientoUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -23,8 +21,7 @@ import reactor.test.StepVerifier;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +36,7 @@ class RegistrarSolicitudTest {
     private DatosUsuario datosUsuario;
     private InformacionUsuarioToken informacionUsuarioToken;
     private InformacionUsuario informacionUsuario;
-
+    private CalcularCapacidadEndeudamientoUseCase calcularCapacidadEndeudamientoUseCase;
 
     private Estado estado;
     private TipoPrestamo tipoPrestamo;
@@ -50,7 +47,9 @@ class RegistrarSolicitudTest {
         tipoPrestamoRepository = Mockito.mock(TipoPrestamoRepository.class);
         estadoRepository = Mockito.mock(EstadoRepository.class);
         clienteWebClientes = Mockito.mock(ClienteWebClientes.class);
-        registrarSolicitudUseCase = new RegistrarSolicitudUseCase(solicitudRepository, tipoPrestamoRepository, estadoRepository, clienteWebClientes);
+        calcularCapacidadEndeudamientoUseCase = Mockito.mock(CalcularCapacidadEndeudamientoUseCase.class);
+        registrarSolicitudUseCase = new RegistrarSolicitudUseCase(solicitudRepository, tipoPrestamoRepository, estadoRepository, clienteWebClientes, calcularCapacidadEndeudamientoUseCase );
+
 
         estado = new Estado();
         estado.setIdEstado(1);
@@ -66,18 +65,18 @@ class RegistrarSolicitudTest {
         usuarioResponse.setData(datosUsuario);
 
 
-        informacionUsuario =InformacionUsuario.builder()
-                        .rol("Cliente")
+        informacionUsuario = InformacionUsuario.builder()
+                .rol("Cliente")
                 .subject("mail@mail.com")
                 .documento("10922123")
                 .build();
 
-       informacionUsuarioToken = InformacionUsuarioToken
-               .builder()
-               .mensaje("ok")
-               .data(informacionUsuario)
-               .estado(200)
-               .build();
+        informacionUsuarioToken = InformacionUsuarioToken
+                .builder()
+                .mensaje("ok")
+                .data(informacionUsuario)
+                .estado(200)
+                .build();
 
 
         when(clienteWebClientes.buscarUsuarioPorToken()).thenReturn(Mono.just(informacionUsuarioToken));
@@ -88,6 +87,16 @@ class RegistrarSolicitudTest {
 
     private Solicitud generarSolicitud() {
         Solicitud solicitud = new Solicitud();
+        solicitud.setPlazo(6);
+        solicitud.setMonto(BigDecimal.valueOf(400000));
+        solicitud.setDocumentoIdentidad("10922123");
+        solicitud.setIdTipoPrestamo(1);
+        solicitud.setEmail("mail@mail.com");
+        return solicitud;
+    }
+
+    private SolicitudUnica generarSolicitudUnica() {
+        SolicitudUnica solicitud = new SolicitudUnica();
         solicitud.setPlazo(6);
         solicitud.setMonto(BigDecimal.valueOf(400000));
         solicitud.setDocumentoIdentidad("10922123");
@@ -111,10 +120,10 @@ class RegistrarSolicitudTest {
     void registrarConExito() {
         Solicitud solicitud = generarSolicitud();
         SolicitudCreada solicitudCreada = generarSolicitudCreada();
-        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(generarSolicitudUnica()));
 
         StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
-                .expectNextMatches(u->
+                .expectNextMatches(u ->
                         u.getEstado().equals(solicitudCreada.getEstado())
                 )
                 .verifyComplete();
@@ -182,7 +191,7 @@ class RegistrarSolicitudTest {
     @Test
     void errorConPermisosRol() {
         Solicitud solicitud = generarSolicitud();
-        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(generarSolicitudUnica()));
         informacionUsuario.setRol("RolError");
         StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
@@ -197,7 +206,7 @@ class RegistrarSolicitudTest {
     void errorConPermisosDocumento() {
         Solicitud solicitud = generarSolicitud();
         solicitud.setDocumentoIdentidad("1234Fail");
-        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(solicitud));
+        when(solicitudRepository.registrar(any(Solicitud.class))).thenReturn(Mono.just(generarSolicitudUnica()));
 
         StepVerifier.create(registrarSolicitudUseCase.registrar(solicitud))
                 .expectErrorSatisfies(error -> {
@@ -207,4 +216,37 @@ class RegistrarSolicitudTest {
                 })
                 .verify();
     }
+
+    @Test
+    void testRealizarValidacionAutomatica() {
+
+        Solicitud solicitud = new Solicitud();
+        solicitud.setDocumentoIdentidad("123456");
+        BigDecimal tasaInteres = BigDecimal.valueOf(0.05);
+        int idSolicitud = 1;
+
+        UsuarioResponse usuarioResponse = new UsuarioResponse();
+        DatosUsuario datosUsuario = new DatosUsuario();
+        usuarioResponse.setData(datosUsuario);
+
+
+        when(clienteWebClientes.buscarCliente(anyString()))
+                .thenReturn(Mono.just(usuarioResponse));
+
+        when(calcularCapacidadEndeudamientoUseCase.calcularCapacidadEndeudamiento(
+                any(Solicitud.class), any(DatosUsuario.class), any(BigDecimal.class), anyInt()))
+                .thenReturn(Mono.just("resultado"));
+
+
+        Mono<Void> result = registrarSolicitudUseCase.realizarValidacionAutomatica(solicitud, tasaInteres, idSolicitud);
+
+
+        StepVerifier.create(result)
+                .verifyComplete();
+
+        verify(clienteWebClientes).buscarCliente("123456");
+        verify(calcularCapacidadEndeudamientoUseCase).calcularCapacidadEndeudamiento(
+                solicitud, datosUsuario, tasaInteres, idSolicitud);
+    }
+
 }
