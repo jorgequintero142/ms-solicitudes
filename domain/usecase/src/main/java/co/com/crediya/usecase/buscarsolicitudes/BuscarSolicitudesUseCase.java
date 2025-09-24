@@ -16,11 +16,12 @@ public class BuscarSolicitudesUseCase {
 
     private final DetalleSolicitudRepository solicitudRepository;
     private final ClienteWebClientes clienteWebClientes;
-
+    private static final String ESTADO_BUSQUEDA_EXCLUIR = "APROBADO";
     public Flux<DetalleSolicitudDTO> buscarSolicitudes(ParametrosBusqueda parametrosBusqueda) {
 
        return  Flux.fromArray(parametrosBusqueda.estados.split(","))
                 .map(String::trim)
+                .filter(nombreEstado -> !ESTADO_BUSQUEDA_EXCLUIR.equals(nombreEstado))
                 .map(EstadosSolicitudEnum::buscarCodigo)
                 .collectList()
                 .doOnNext(parametrosBusqueda::setCodigosEstado)

@@ -4,8 +4,9 @@ import java.util.Arrays;
 
 public enum EstadosSolicitudEnum {
     PENDIENTE("PENDIENTE",1),
+    APROBADA("APROBADA",2),
     REVISION("REVISION",3),
-    RECHAZADAS("RECHAZADAS",4);
+    RECHAZADA("RECHAZADA",4);
 
     private final String estado;
     private final int codigo;

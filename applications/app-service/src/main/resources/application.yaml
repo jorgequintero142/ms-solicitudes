@@ -27,12 +27,12 @@ cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
 adapters:
   r2dbc:
-    host: ${DB_HOST}
-    port: ${DB_PORT}
-    database: ${DB_NAME}
+    host: "${DB_HOST}"
+    port: "${DB_PORT}"
+    database: "${DB_NAME}"
     schema: "public"
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    username: "${DB_USER}"
+    password: "${DB_PASSWORD}"
 springdoc:
   api-docs:
     enabled: true
@@ -44,6 +44,9 @@ adapter:
   restconsumer:
     timeout: 5000
     url: "http://autenticacion:8080"
+  sqs:
+    region: "us-east-2"
+    queueUrl: "${SQS_URL}"
 resilience4j:
   circuitbreaker:
     instances:
@@ -65,3 +68,11 @@ resilience4j:
         slidingWindowSize: 10
         minimumNumberOfCalls: 10
         waitDurationInOpenState: "10s"
+entrypoint:
+  sqs:
+    region: "us-east-2"
+    queueUrl: "${SQS_URL_CAMBIOESTADO}"
+    waitTimeSeconds: 20
+    maxNumberOfMessages: 10
+    visibilityTimeoutSeconds: 10
+    numberOfThreads: 1

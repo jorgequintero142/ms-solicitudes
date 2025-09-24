@@ -64,9 +64,6 @@ class BuscarSolicitudesTest {
         clienteWebClientes = Mockito.mock(ClienteWebClientes.class);
 
         buscarSolicitudesUseCase = new BuscarSolicitudesUseCase(detalleSolicitudRepository, clienteWebClientes);
-
-
-
     }
 
     @Test

@@ -16,4 +16,5 @@ public class Solicitud {
     private String documentoIdentidad;
     private int idTipoPrestamo;
     private String email;
+    private boolean validacionAutomatica;
 }
