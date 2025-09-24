@@ -22,7 +22,7 @@ public class Constantes {
     public static final BigDecimal MONTO_MINIMO = new BigDecimal("0");
 
     public static final String ERROR_DOCUMENTO_SOLICITUD = "El número de documento de la solicitud, no corresponde con el tuyo";
-    public static final String ERROR_ROL_CREAR_SOLICITUD = "Con tu rol no se permite crear solicitudes";
+    public static final String ERROR_ROL_CREAR_SOLICITUD = "Con tu rol no se permite crear/modificar solicitudes";
 
     public static final String ERROR_ACTUALIZANDO_ESTADO ="Error actualizando estado de la solicitud";
 

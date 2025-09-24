@@ -20,27 +20,30 @@ public class AprobarRechazarSolicitudUseCase {
     private final SolicitudRepository solicitudRepository;
     private final List<String> ESTADOS_PERMITIDOS = Arrays.asList("APROBADA", "RECHAZADA");
     private final ClienteWebClientes clienteWebClientes;
+    private final String ROL_PERMITIDO = "Asesor";
 
-    public Mono<String> aprobarRechazar(Integer idSoliciud, String estado) {
-        return validarEstado(estado)
-                .switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ESTADO_ENVIADO_NO_PERMITDO)))
-                .flatMap(this::homologarEstado)
-                .flatMap(idEstado ->
-                        solicitudRepository.aprobarRechazar(idSoliciud, idEstado)
-                                .flatMap(solicitud ->
-                                        clienteWebClientes.buscarCliente(solicitud.getDocumentoIdentidad())
-                                                .flatMap(usuarioResponse -> {
-                                                    ReporteAprobarRechazar reporte = ReporteAprobarRechazar
-                                                            .builder()
-                                                            .idSolicitud(idSoliciud)
-                                                            .email(solicitud.getEmail())
-                                                            .estado(estado)
-                                                            .nombre(usuarioResponse.getData().getNombre())
-                                                            .build();
-                                                    return publicadorSQSService.send(reporte)
-                                                            .thenReturn(PROCESO_OK);
-                                                })
-                                ));
+    public Mono<String> aprobarRechazar(Integer idSolicitud, String estado) {
+        return validarPermisos()
+                .then(validarEstado(estado)
+                        .switchIfEmpty(Mono.error(new ParametroNoValidoException(Constantes.ESTADO_ENVIADO_NO_PERMITDO)))
+                        .flatMap(this::homologarEstado)
+                        .flatMap(idEstado ->
+                                solicitudRepository.aprobarRechazar(idSolicitud, idEstado)
+                                        .flatMap(solicitud ->
+
+                                                clienteWebClientes.buscarCliente(solicitud.getDocumentoIdentidad())
+                                                        .flatMap(usuarioResponse -> {
+                                                            ReporteAprobarRechazar reporte = ReporteAprobarRechazar
+                                                                    .builder()
+                                                                    .idSolicitud(idSolicitud)
+                                                                    .email(solicitud.getEmail())
+                                                                    .estado(estado)
+                                                                    .nombre(usuarioResponse.getData().getNombre())
+                                                                    .build();
+                                                            return publicadorSQSService.send(reporte)
+                                                                    .thenReturn(PROCESO_OK);
+                                                        })
+                                        )));
     }
 
     private Mono<String> validarEstado(String estado) {
@@ -53,13 +56,25 @@ public class AprobarRechazarSolicitudUseCase {
         );
     }
 
+    public Mono<Void> validarPermisos() {
+        return clienteWebClientes.buscarUsuarioPorToken().flatMap(informacionUsuarioToken -> {
+            if (ROL_PERMITIDO.equals(informacionUsuarioToken.getData().getRol())) {
+                return Mono.empty();
+            }
+            return Mono.error(new ParametroNoValidoException(Constantes.ERROR_ROL_CREAR_SOLICITUD));
+        });
+    }
+
     private Mono<Integer> homologarEstado(String estado) {
         return Mono.just(EstadosSolicitudEnum.buscarCodigo(estado));
     }
 
     public Mono<Void> aprobarAutoSolicitud(int idSolicitud, int idEstado) {
         return solicitudRepository.aprobarRechazar(idSolicitud, idEstado)
-                .onErrorMap(e -> new RuntimeException(Constantes.ERROR_ACTUALIZANDO_ESTADO))
+                .onErrorMap(e -> {
+                    e.printStackTrace();
+                    return new RuntimeException(Constantes.ERROR_ACTUALIZANDO_ESTADO);
+                })
                 .then();
     }
 

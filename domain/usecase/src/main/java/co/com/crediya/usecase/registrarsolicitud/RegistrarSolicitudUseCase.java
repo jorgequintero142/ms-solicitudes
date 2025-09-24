@@ -42,8 +42,7 @@ public class RegistrarSolicitudUseCase {
                                             .build();
 
                                     if (solicitud.isValidacionAutomatica()) {
-                                        System.out.println("SI validacion automatica.....");
-                                        return realizarValidacionAutomatica(solicitud, tipoPrestamo.getTasaInteres(),nuevaSolicitud.getIdSolicitud())
+                                        return realizarValidacionAutomatica(solicitud, tipoPrestamo.getTasaInteres(), nuevaSolicitud.getIdSolicitud())
                                                 .thenReturn(solicitudCreada);
                                     }
 
@@ -68,7 +67,7 @@ public class RegistrarSolicitudUseCase {
 
     private Mono<Void> validarPlazo(Solicitud solicitud) {
         return Mono.defer(() -> {
-            if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO)  {
+            if (solicitud.getPlazo() < Constantes.PLAZO_MINIMO) {
                 return Mono.error(new ParametroNoValidoException(Constantes.ERROR_PLAZO));
             }
             return Mono.empty();
@@ -78,7 +77,7 @@ public class RegistrarSolicitudUseCase {
     private Mono<Void> validarMonto(Solicitud solicitud) {
 
         return Mono.defer(() -> {
-            if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0)  {
+            if (solicitud.getMonto() == null || solicitud.getMonto().compareTo(Constantes.MONTO_MINIMO) <= 0) {
                 return Mono.error(new ParametroNoValidoException(Constantes.ERROR_VALOR_MONTO));
             }
             return Mono.empty();
@@ -111,25 +110,25 @@ public class RegistrarSolicitudUseCase {
 
     Mono<Solicitud> verificarPermisos(String documento, String rol, Solicitud solicitud) {
         return Mono.defer(() -> {
-            if (!documento.equals(solicitud.getDocumentoIdentidad())) {
-                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_DOCUMENTO_SOLICITUD));
-            }
+
             if (!ROL_CREAR_SOLICITUD.equals(rol)) {
                 return Mono.error(new ParametroNoValidoException(Constantes.ERROR_ROL_CREAR_SOLICITUD));
             }
+            if (!documento.equals(solicitud.getDocumentoIdentidad())) {
+                return Mono.error(new ParametroNoValidoException(Constantes.ERROR_DOCUMENTO_SOLICITUD));
+            }
+
             return Mono.just(solicitud);
         });
     }
 
     Mono<Void> realizarValidacionAutomatica(Solicitud solicitud, BigDecimal tasaInteres, int idSolicitud) {
-        System.out.println("Continua validacion automatica.....1");
         return clienteWebClientes.buscarCliente(solicitud.getDocumentoIdentidad()).flatMap(
-                usuarioResponse -> {
-                    System.out.println("Continua validacion automatica.....2");
-                   return  calcularCapacidadEndeudamientoUseCase
-                           .calcularCapacidadEndeudamiento(solicitud,usuarioResponse.getData(), tasaInteres, idSolicitud)
-                           .flatMap(s -> Mono.empty());
-                }
+                usuarioResponse ->
+                        calcularCapacidadEndeudamientoUseCase
+                                .calcularCapacidadEndeudamiento(solicitud, usuarioResponse.getData(), tasaInteres, idSolicitud)
+                                .flatMap(s -> Mono.empty())
+
         );
     }
 }

@@ -21,7 +21,6 @@ public class CalcularCapacidadEndeudamientoUseCase {
     public Mono<String> calcularCapacidadEndeudamiento(Solicitud solicitud, DatosUsuario data, BigDecimal tasaInteres, int idSolicitud) {
         return capacidadEndeudamientoRepository
                 .calcularDeudaMensual(solicitud.getDocumentoIdentidad())
-                .switchIfEmpty(Mono.error(new ParametroNoValidoException("Datos vacíos ...")))
                 .map(totalDeuda -> CapacidadEndeudamiento.builder()
                         .monto(solicitud.getMonto())
                         .plazo(solicitud.getPlazo())
