@@ -42,32 +42,13 @@ public class AprobarRechazarSolicitudUseCase {
                                                                     .estado(estado)
                                                                     .nombre(usuarioResponse.getData().getNombre())
                                                                     .build();
-
-                                                            Mono<Void> enviarCreditoAprobado = Mono.empty();
-                                                            /*if ("APROBADA".equalsIgnoreCase(estado)) {
-                                                                ReportarCreditoAprobado creditoAprobado = ReportarCreditoAprobado.builder()
-                                                                        .montoTotalPrestamos(solicitud.getMonto())
-                                                                        .totalPrestamosAprobados(1)
-                                                                        .build();
-
-                                                                enviarCreditoAprobado = reportarCreditoAprobado(creditoAprobado);
-                                                            }*/
-
-
-                                                            return Mono.when(
-                                                                    publicadorSQSService.send(reporte),
-                                                                    enviarCreditoAprobado
-                                                            ).thenReturn(PROCESO_OK);
+                                                            return publicadorSQSService.send(reporte)
+                                                                    .thenReturn(PROCESO_OK);
                                                         })
                                         )));
     }
 
 
-    public Mono<Void> reportarCreditoAprobado(ReportarCreditoAprobado reportarCreditoAprobado) {
-        System.out.println("reportarCreditoAprobado->"+reportarCreditoAprobado);
-        return publicadorSQSService.send(reportarCreditoAprobado)
-                .then();
-    }
     private Mono<String> validarEstado(String estado) {
         return Mono.defer(() -> {
                     if (ESTADOS_PERMITIDOS.contains(estado)) {
@@ -92,8 +73,6 @@ public class AprobarRechazarSolicitudUseCase {
     }
 
     public Mono<Void> aprobarAutoSolicitud(int idSolicitud, int idEstado) {
-        System.out.println("aprobarAutoSolicitud->"+idSolicitud+"<>"+idEstado);
-
         return solicitudRepository.aprobarRechazar(idSolicitud, idEstado)
                 .onErrorMap(e -> {
                     e.printStackTrace();

@@ -6,8 +6,10 @@ import co.com.crediya.model.gateways.PublicadorSQSService;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.dto.DatosUsuario;
 import co.com.crediya.model.solicitud.dto.UsuarioResponse;
+import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
 import co.com.crediya.model.solicitud.gateways.ClienteWebClientes;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
+import co.com.crediya.usecase.Constantes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -16,6 +18,7 @@ import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -59,6 +62,7 @@ class AprobarRechazarSolicitudTest {
     void setUp() {
         solicitudRepository = Mockito.mock(SolicitudRepository.class);
         clienteWebClientes = Mockito.mock(ClienteWebClientes.class);
+        when(clienteWebClientes.buscarUsuarioPorToken()).thenReturn(Mono.empty());
         publicadorSQSService = Mockito.mock(PublicadorSQSService.class);
         aprobarRechazarSolicitudUseCase = new AprobarRechazarSolicitudUseCase(publicadorSQSService, solicitudRepository,clienteWebClientes);
     }
@@ -76,5 +80,21 @@ class AprobarRechazarSolicitudTest {
                 .verifyComplete();
 
         verify(solicitudRepository).aprobarRechazar(anyInt(), anyInt());
+    }
+
+    @Test
+    void validarPermisos() {
+        Solicitud solicitud = generarSolicitud();
+        when(clienteWebClientes.buscarUsuarioPorToken()).thenReturn(  Mono.error(new ParametroNoValidoException(Constantes.ERROR_ROL_CREAR_SOLICITUD)));
+        when(solicitudRepository.aprobarRechazar(anyInt(), anyInt())).thenReturn(Mono.just(solicitud));
+        when(clienteWebClientes.buscarCliente(anyString())).thenReturn(Mono.just(usuarioResponse));
+
+        StepVerifier.create(aprobarRechazarSolicitudUseCase.aprobarRechazar(CODIGO_SOLICITUD, ESTADO))
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(ParametroNoValidoException.class);
+                    ParametroNoValidoException ex = (ParametroNoValidoException) error;
+                    assertThat(ex.getError()).isEqualTo(Constantes.ERROR_ROL_CREAR_SOLICITUD);
+                })
+                .verify();
     }
 }
