@@ -2,14 +2,11 @@ package co.com.crediya.r2dbc.solicitud;
 
 import co.com.crediya.model.capacidadendeudamiento.TotalDeudaMensual;
 import co.com.crediya.model.capacidadendeudamiento.gateways.CapacidadEndeudamientoRepository;
-import co.com.crediya.model.detallesolicitud.DetalleSolicitudDTO;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.r2dbc.helper.ReactiveAdapterOperations;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
-
-import java.math.BigDecimal;
 
 @Repository
 public class CapacidadEndeudamientoRepositoryAdapter extends ReactiveAdapterOperations<

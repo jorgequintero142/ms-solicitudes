@@ -95,20 +95,6 @@ public class AprobarRechazarSolicitudUseCase {
         System.out.println("aprobarAutoSolicitud->"+idSolicitud+"<>"+idEstado);
 
         return solicitudRepository.aprobarRechazar(idSolicitud, idEstado)
-                /*.flatMap(solicitud -> {
-                    System.out.println("Ok actualizacion.. validando estado");
-                    if (idEstado == 2) {
-                        System.out.println("Solicitud publicar mensaje aprobado ");
-                        ReportarCreditoAprobado creditoAprobado = ReportarCreditoAprobado
-                                .builder()
-                                .montoTotalPrestamos(BigDecimal.TEN)
-                                .build();
-                        return reportarCreditoAprobado(creditoAprobado);
-                    } else {
-                        System.out.println("Ok actualizacion.. no se hizo nada ");
-                    }
-                    return Mono.empty();
-                })*/
                 .onErrorMap(e -> {
                     e.printStackTrace();
                     return new RuntimeException(Constantes.ERROR_ACTUALIZANDO_ESTADO);
