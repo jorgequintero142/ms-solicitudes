@@ -1,5 +1,6 @@
 package co.com.crediya.usecase.aprobarrechazarsolicitud;
 
+import co.com.crediya.model.aprobarrechazarsolicitud.ReportarCreditoAprobado;
 import co.com.crediya.model.aprobarrechazarsolicitud.ReporteAprobarRechazar;
 import co.com.crediya.model.gateways.PublicadorSQSService;
 import co.com.crediya.model.solicitud.exceptions.ParametroNoValidoException;
@@ -10,6 +11,7 @@ import co.com.crediya.usecase.buscarsolicitudes.EstadosSolicitudEnum;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 
@@ -40,12 +42,32 @@ public class AprobarRechazarSolicitudUseCase {
                                                                     .estado(estado)
                                                                     .nombre(usuarioResponse.getData().getNombre())
                                                                     .build();
-                                                            return publicadorSQSService.send(reporte)
-                                                                    .thenReturn(PROCESO_OK);
+
+                                                            Mono<Void> enviarCreditoAprobado = Mono.empty();
+                                                            /*if ("APROBADA".equalsIgnoreCase(estado)) {
+                                                                ReportarCreditoAprobado creditoAprobado = ReportarCreditoAprobado.builder()
+                                                                        .montoTotalPrestamos(solicitud.getMonto())
+                                                                        .totalPrestamosAprobados(1)
+                                                                        .build();
+
+                                                                enviarCreditoAprobado = reportarCreditoAprobado(creditoAprobado);
+                                                            }*/
+
+
+                                                            return Mono.when(
+                                                                    publicadorSQSService.send(reporte),
+                                                                    enviarCreditoAprobado
+                                                            ).thenReturn(PROCESO_OK);
                                                         })
                                         )));
     }
 
+
+    public Mono<Void> reportarCreditoAprobado(ReportarCreditoAprobado reportarCreditoAprobado) {
+        System.out.println("reportarCreditoAprobado->"+reportarCreditoAprobado);
+        return publicadorSQSService.send(reportarCreditoAprobado)
+                .then();
+    }
     private Mono<String> validarEstado(String estado) {
         return Mono.defer(() -> {
                     if (ESTADOS_PERMITIDOS.contains(estado)) {
@@ -70,7 +92,23 @@ public class AprobarRechazarSolicitudUseCase {
     }
 
     public Mono<Void> aprobarAutoSolicitud(int idSolicitud, int idEstado) {
+        System.out.println("aprobarAutoSolicitud->"+idSolicitud+"<>"+idEstado);
+
         return solicitudRepository.aprobarRechazar(idSolicitud, idEstado)
+                /*.flatMap(solicitud -> {
+                    System.out.println("Ok actualizacion.. validando estado");
+                    if (idEstado == 2) {
+                        System.out.println("Solicitud publicar mensaje aprobado ");
+                        ReportarCreditoAprobado creditoAprobado = ReportarCreditoAprobado
+                                .builder()
+                                .montoTotalPrestamos(BigDecimal.TEN)
+                                .build();
+                        return reportarCreditoAprobado(creditoAprobado);
+                    } else {
+                        System.out.println("Ok actualizacion.. no se hizo nada ");
+                    }
+                    return Mono.empty();
+                })*/
                 .onErrorMap(e -> {
                     e.printStackTrace();
                     return new RuntimeException(Constantes.ERROR_ACTUALIZANDO_ESTADO);

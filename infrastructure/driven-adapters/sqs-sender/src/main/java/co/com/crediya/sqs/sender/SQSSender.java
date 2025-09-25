@@ -27,7 +27,7 @@ public class SQSSender implements PublicadorSQSService {
                     log.error("buildRequest.error--> {}", throwable.getMessage());
                 })
                 .flatMap(request -> {
-                    log.error("request.enviado--> {}", request.messageBody());
+                    log.debug("request.enviado--> {}", request.messageBody());
                     return Mono.fromFuture(client.sendMessage(request));
                 })
                 .doOnError(throwable -> {

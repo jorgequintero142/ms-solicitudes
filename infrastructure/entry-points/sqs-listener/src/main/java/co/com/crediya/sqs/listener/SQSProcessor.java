@@ -14,16 +14,27 @@ import java.util.function.Function;
 @Slf4j
 public class SQSProcessor implements Function<Message, Mono<Void>> {
     private final AprobarRechazarSolicitudUseCase aprobarRechazarSolicitudUseCase;
-
+    private static final String PREFIX_SQS= "reporte->";
     @Override
     public Mono<Void> apply(Message message) {
-        String[] parametros = message.body().split(",");
-        int idSolicitud = Integer.parseInt(parametros[0]);
-        int idCodigo = Integer.parseInt(parametros[1]);
-        return aprobarRechazarSolicitudUseCase.aprobarAutoSolicitud(idSolicitud, idCodigo)
-                .doOnSuccess(unused ->
-                        log.info("Se actualiza la solicitud con id {} al estado {}", idSolicitud, idCodigo))
-                .doOnError(e ->
-                        log.error("Error actualizando solicitud {} al estado {}: {}", idSolicitud, idCodigo, e.getMessage()));
+        return Mono.defer(() -> {
+            String body = message.body();
+
+            if (!body.startsWith(PREFIX_SQS)) {
+                String[] parametros = body.split(",");
+                int idSolicitud = Integer.parseInt(parametros[0]);
+                int idCodigo = Integer.parseInt(parametros[1]);
+
+                return aprobarRechazarSolicitudUseCase.aprobarAutoSolicitud(idSolicitud, idCodigo)
+                        .doOnSuccess(unused ->
+                                log.info("Solicitud {} aprobada con estado {}", idSolicitud, idCodigo))
+                        .doOnError(e ->
+                                log.error("Error aprobando solicitud {} al estado {}: {}", idSolicitud, idCodigo, e.getMessage()));
+            } else {
+
+                log.info("Se procesa dynamo: {}", body);
+                return Mono.empty();
+            }
+        });
     }
 }

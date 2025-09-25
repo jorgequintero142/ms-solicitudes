@@ -1,6 +1,8 @@
 package co.com.crediya.sqs.sender;
 
 import co.com.crediya.model.aprobarrechazarsolicitud.ReporteAprobarRechazar;
+import co.com.crediya.model.aprobarrechazarsolicitud.ReportarCreditoAprobado;
+
 import co.com.crediya.model.capacidadendeudamiento.CapacidadEndeudamiento;
 import co.com.crediya.model.gateways.PublicadoraMensajesSQS;
 import co.com.crediya.sqs.sender.config.SQSSenderProperties;
@@ -12,6 +14,7 @@ import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -23,10 +26,14 @@ public class GeneradorMensajes {
     public SendMessageRequest buildRequest(PublicadoraMensajesSQS publicadoraMensajesSQS) {
         MensajesSQSStrategy estrategia = mensajesSQSContexto
                 .obtenerEstrategia(definirEstrategia(publicadoraMensajesSQS));
+
         MensajePublicar mensajePublicar = estrategia.crearMensajePublicar(publicadoraMensajesSQS);
+        System.out.println("estoy creando un mensaje con "+mensajePublicar.getMensaje()+"<=++=>"+mensajePublicar.getEvento());
         return SendMessageRequest.builder()
                 .queueUrl(properties.queueUrl())
+                .messageGroupId(mensajePublicar.getEvento())
                 .messageAttributes(generarAtributos(mensajePublicar.getEvento()))
+                .messageDeduplicationId(UUID.randomUUID().toString())
                 .messageBody(mensajePublicar.getMensaje())
                 .build();
 
@@ -41,6 +48,9 @@ public class GeneradorMensajes {
         } else if (publicadoraMensajesSQS instanceof ReporteAprobarRechazar) {
             log.debug("enviando EVENTO_NOTIFICAR");
             return ConstantesMensajesSQS.EVENTO_NOTIFICAR;
+        } else if (publicadoraMensajesSQS instanceof ReportarCreditoAprobado) {
+            log.debug("enviando EVENTO_APROBAR");
+            return ConstantesMensajesSQS.EVENTO_APROBAR;
         }
         log.error("No se encontro publicador para enviar mensaje a la SQS");
         return null;

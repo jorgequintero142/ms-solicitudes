@@ -40,6 +40,7 @@ public class SQSListener {
     }
 
     private Flux<Void> listen() {
+        System.out.println("lisening....");
         return getMessages()
                 .flatMap(message -> processor.apply(message)
                         .name("async_operation")
